@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Google_Drive__create_file",
+      "mcp__Google_Drive__update_file",
+      "mcp__Google_Drive__download_file_content",
+      "mcp__Google_Drive__search_files",
+      "mcp__Google_Drive__read_file_content",
+      "mcp__Google_Drive__get_file_metadata",
+      "mcp__Google_Slides__read_presentation",
+      "mcp__Google_Sheets__get_spreadsheet",
+      "mcp__Google_Sheets__get_values",
+      "mcp__Slack__slack_search_public_and_private",
+      "mcp__Slack__slack_read_channel",
+      "mcp__Slack__slack_read_thread",
+      "mcp__Slack__slack_read_file",
+      "mcp__Slack__slack_search_users",
+      "mcp__Slack__slack_send_message_draft",
+      "mcp__Granola__search_meetings",
+      "mcp__Granola__get_meetings",
+      "mcp__Granola__get_meeting_transcript",
+      "mcp__Granola__search_transcripts",
+      "Artifact"
+    ]
+  }
+}
