@@ -15,7 +15,7 @@ ISKCON / Hare Krishna Movement (HKM, Hyderabad entity) runs festival donation ca
 |---|---|---|---|---|
 | Janmashtami | 24 Aug–4 Sep | ~7.7L devotees attempted, 2.95L connected (19.6%) | 153 payers. Deck: ₹7.88L donations, ROAS warm/hot 1.70× and cold 0.20×. BM revenue ~₹15L | Male "Gopal" voice gave 3× the commitments. "ISKCON Hyderabad" worked better as the caller name. Cold leads lose money. WhatsApp was blocked mid-campaign |
 | Pitru Paksha | 6/8–10 Oct | ~6.5L calls | ~129 payers, ROAS ~0.5. ₹25L committed on calls, only ₹1.5–2L converted | Half the payment links never arrived: Karix had no status webhook, no SMS/RCS, and the IP was not whitelisted. Hot/warm/cold shared one workflow and got mixed up |
-| Diwali | 2–8 Nov | 1,00,228 people, 2,20,190 calls | 2,833 commitments, 212 paid, ₹3.25L collected vs ₹2.07L cost = **1.57×**. Hot 9.98×, warm 2.93×, cold 0.42×, follow-up 8.63× (13× quoted on 18 Nov) | Launch day failed on 429s because CPS had been returned to the pool with no heads-up. Seva list changed at the last minute. "ISKCON" was spelled letter by letter in ~2,000 calls |
+| Diwali | 2–8 Nov | 1,00,228 people, 2,20,190 calls | 2,833 commitments, 212 paid, ₹3.25L collected vs ₹2.07L cost = **1.57×** (from the meeting summary of a dashboard screenshot; get the screenshot before quoting). Hot 9.98×, warm 2.93×, cold 0.42×, follow-up 8.63× (13× quoted on 18 Nov) | 2 Nov morning failed twice on 429s: CPS had been returned to the pool and per-number CPS was set too high. Seva list changed at the last minute. "ISKCON" was spelled letter by letter in ~2,000 calls |
 | **Kartik Purnima** | **22–24 Nov** | ₹2L budget | — | See `KARTIK_PURNIMA_PLAN.md` |
 | Vaikuntha Ekadashi | ~17–19 Dec (unconfirmed) | — | — | — |
 | New Year | from 26 Dec | ₹7L budget, ~10L calls | target ≥1.5×, ₹25L donations | Needs infra provisioning and the number-rotation fix |
@@ -26,7 +26,7 @@ Known contradictions in the numbers (do not quote without checking):
 - Janmashtami: ₹7.88L vs 153 payers with a ₹5,008 maximum payment.
 
 ## 3. System architecture (Calling Workflow HTML, Aayush 28 Oct; Pitru Paksha HTML, Jagan 7 Oct)
-1. **CSV lead push** into the console Campaign Manager. The console is the CRM; there is no CRM and no Nautilus yet. CSV only, max 5 MB.
+1. **CSV lead push** into the console Campaign Manager. The console is the CRM; there is no Nautilus lead store (Nautilus is used only for the web-payment check). CSV only, max 5 MB. The schema and rules below come from Jagan's Pitru Paksha HTML (7 Oct).
    Schema: `externalUserId, externalWorkId, firstName, lastName, phoneNumber, email, lead_id, preferred_language, seva_name, donation, lead_segment`.
    `externalWorkId` must be **unique per festival**, or the call is silently skipped.
    Upload ramp: 1 → 20 → 200 → rest. **Never upload to the follow-up workflow.**
@@ -42,16 +42,17 @@ Known contradictions in the numbers (do not quote without checking):
    - Mid-call tools: `send_donation_link`, `check_link_delivery`.
 5. High intent → **WhatsApp link via Karix** (utility template, ~80% delivered).
 6. 6A: Karix webhook returns WhatsApp status. 6B: if it fails, WbizTool personal-number WhatsApp within 5 min.
-   - RCS → SMS fallback (RCS ~32% delivered, SMS ₹0.12/msg).
-   - WbizTool is capped at 100–150 messages per number, has 1 number wired, and brought ₹23K in Diwali.
+   - RCS → SMS fallback (RCS ~32% delivered, SMS ₹0.12/msg). No RCS delivered status, so SMS rarely fires.
+   - WbizTool is wired as an automated fallback in the Hot/Warm workflows (Jagan, 29 Oct). Capped at 150 messages per number, 1–2 numbers, ₹23K in Diwali. A manual extra round was also sent.
+   - **Links, seva slugs, paid-check and the festival-window check are festival-specific** (`*-diwali`; fail-closed). Every new festival needs new HKM pages, slugs, attribution and window.
 7. Live dashboard (Jagan, run.app): payments arrive in about 10 s through Razorpay. The data source (MongoDB vs unified table) is **unknown**.
 8. Paid? If not paid after 24 h (the HTML says 4 h; the 24 h practice is what runs) → follow-up agent → same route from stage 5.
 9. Dedupe / DND list manager.
 
-**Pending items still open on 18 Nov:**
-- P1: WhatsApp-status webhook (Karix rule 37484 never activated).
+**Pending items still open on 18 Nov** (no owner is named in the HTML):
+- P1: WhatsApp-status webhook (Karix delivery rule 37484 was not active as of 7 Oct, per Slack).
 - P2: BM IP whitelisting.
-- P3: Ownership of stages 5–7.
+- P3: Ownership from Karix, stages 5–7.
 - P4: RCS/SMS fallback.
 - P5: Seva and benefits content.
 
@@ -83,7 +84,7 @@ Root cause pattern: Cartesia/Sonic reads ALL-CAPS tokens letter by letter, and E
 | Names with initials | "एन वी एस जे" spoken letter by letter | Normaliser drops initials. Fallback to "devotee", **never "anonymous"** |
 | Amounts | spoken in the wrong language (Telugu/Hindi) in the first turn | Pass the amount as words in the call language, or speak it from turn 2 |
 | Bal Gopal | said "balTulsi" | Check seva and deity names per language |
-| Any term | pronunciation library is skipped when detected language = "unknown"; console pronunciation column showed 0 words (Oct, cross-account) | Do not rely only on the console dictionary. Fix the spelling at the source (prompt/LLM output) |
+| Any term | the Diwali ISKCON fix was a console dictionary entry, never retested. Cross-account bugs: library fell back when language = "unknown" (reported fixed in prod, 15 Oct); pronunciation column showed 0 words (28 Oct) | Do not rely only on the console dictionary. Fix the spelling at the source (prompt/LLM output) |
 
 Test every language the campaign dials (Hindi, English, Telugu, Kannada, Marathi, Tamil) with all of the above. Check TTS model parity across main and follow-up agents: Janmashtami's follow-up ran a different Sonic version.
 
@@ -105,7 +106,7 @@ Test every language the campaign dials (Hindi, English, Telugu, Kannada, Marathi
 | Manager, copy on provisioning; CRM idea | **Abhishek Ranjan** |
 
 ## 7. Standing lessons (things that broke before and will break again)
-1. **No CPS heads-up → launch-day 429s** (Diwali 2 Nov). Vivek needs volume and timing before every launch.
+1. **No CPS heads-up → launch-day 429s** (Diwali 2 Nov, twice that morning; per-number CPS was also set above what was allocated). Vivek needs volume and timing before every launch. Shared CPS is only free before 10 AM and after 7 PM (cap 43).
 2. **Number rotation and retry live inside the workflow.** Removing a number breaks retries. Tanmay's fix is still undone (deferred to Dec/New Year). Never delete a number mid-run; change weights instead, and expect a terminate/restart.
 3. **Business-hours defaults (19:00 cutoff) revert** per number. Re-check them before every trigger.
 4. **No queue flush.** Calls kept going after 7:30 PM in Janmashtami. Know the stop procedure (business hours → delink numbers) before you need it.

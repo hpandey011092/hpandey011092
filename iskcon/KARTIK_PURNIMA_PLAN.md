@@ -8,16 +8,21 @@ Budget ₹2L · stop-loss ₹50K without ROAS · target ≥1.5× · no new exper
 ## 0. The ten things most likely to bite (ranked)
 | # | Risk | Why I think it's live | Owner to chase | What "closed" looks like |
 |---|---|---|---|---|
-| 1 | **No CPS/concurrency heads-up → 429s at 8 AM on the 22nd** | Exactly what killed the first 2K Diwali calls. ISKCON capacity gets returned to the pool between campaigns. Heads-up email not sent as of 18 Nov | Harshdeep sends; **Vivek** acknowledges; Chetan escalates | Vivek confirms in writing the CPS/concurrency allocated for 22–24 Nov, morning and evening slots, against a volume number (leads × 3 retries) |
+| 1 | **No CPS/concurrency heads-up → 429s at 8 AM on the 22nd** | Diwali 2 Nov: almost all of the first 2K-lead batch failed with 429s, and it happened **twice** that morning. ISKCON capacity goes back to the pool between campaigns, and Ishaan set 5 CPS per number while only ~1 was available. Re-triggering failed calls had to go through groundcover because there is no status filter. **Shared CPS is only available to ISKCON before 10 AM or after 7 PM (cap 43)**, so the 10–11 AM part of the morning slot competes with other customers | Harshdeep sends to **Chetan + Prashant, cc Vivek + Abhishek Ranjan**; **Vivek** acknowledges | Vivek confirms in writing the CPS/concurrency for 22–24 Nov against a volume number (leads × 3 retries), **including 10–11 AM**, or the morning push ends at 10. Per-number CPS in the workflow matches what is allocated |
 | 2 | **Pronunciation: ISKCON / Hare Krishna / seva names** | "Hair/HAARE Krishna" was open from 8 Oct to 1 Nov with no confirmed fix. ISKCON caps fixed only via the console dictionary, which is skipped when language = unknown | **Swathi** (build), Gokulram (config) | Prompt, first message, eval and WA templates use इस्कॉन / हरे कृष्ण / सेवा (Devanagari) or lowercase. Recorded test call per language passes the TTS checklist in §3 |
-| 3 | **Number rotation and retry inside the workflow** | Tanmay's fix is not built. Deleting a spam-flagged number mid-run breaks retries | **Ishaan** (ops), Jagan (design) | Written runbook: "if a number is spam-flagged, change its weight to 0 → terminate and restart X". The backup numbers are pre-loaded and named |
+| 3 | **Number rotation and retry inside the workflow** | Tanmay's fix is not built. On 18 Nov you made it Ishaan's "main task", at least to find out why it wasn't done; its scope for Kartik is unclear. Deleting a spam-flagged number mid-run breaks retries, and changing weights needs a terminate and restart | **Ishaan** (ops), Jagan (design) | Written runbook: "if a number is spam-flagged, change its weight to 0 → terminate and restart X". The backup numbers are pre-loaded and named |
 | 4 | **Wrong cohort / no Diwali cohort file** | Plan says the best cohort is Diwali committed-but-unpaid, but Cohort v7 has only Janmashtami and Pitru Paksha. Segment counts were "coming by mail" | **ayushman** decides, **Ishaan** builds | A file per workflow (Hot/Warm/Cold/FUP) with counts, excluding: paid in Diwali, DND, random amounts, non-genuine, "claims paid", vendor base |
 | 5 | **Dedup / externalWorkId reuse** | Pitru Paksha re-called duplicates. A reused `externalWorkId` from Diwali **silently skips** calls | **Ishaan** | Ishaan confirms dedup on phone10 is done, and that `externalWorkId` has a new Kartik prefix |
 | 6 | **Seva/benefit list not frozen** | Diwali changed 5→3 sevas at the last minute; `hot_wa_send` had "Annadana" hard-coded. Freeze asked in channel; no reply | **ayushman** (client), Harshdeep | Written freeze by Thu 19 Nov: Annadaan + Gau Seva only, amounts, no Mahaprasadam/address ask. Link slugs match. Eval and WA template updated |
-| 7 | **Payment link / Karix fallback chain** | P1 webhook (rule 37484), P2 IP whitelist, P4 RCS/SMS still pending. With no delivered status, SMS never fires. WbizTool has only 1 number (150-msg cap) | **Jagan** (integration), **ayushman** (Karix/HKM chase) | Test commit on the 21st: WA delivered + status visible. Known behaviour if WA fails. Wbiz numbers count ≥2 `[confirm]` |
+| 7 | **Payment link / Karix fallback chain** | P1 webhook, P2 IP whitelist, P3 "ownership from Karix", P4 RCS/SMS still pending (HTML 28 Oct, shown 18 Nov; **no owner named**). With no RCS delivered status, SMS never fires, and the SMS template pointed to the Diwali landing page, not the payment page (Jagan 31 Oct). WbizTool is wired as an automated fallback in the Hot/Warm workflows (Jagan 29 Oct, 2 Nov) with 1–2 numbers and a 150-message cap; a manual extra round was also sent | **Jagan** (integration), **ayushman** (Karix/HKM chase) | Test commit on the 21st: WA delivered + status visible. Known behaviour if WA fails. SMS points to the Kartik payment page. Wbiz numbers ≥2 `[confirm]` |
+| 7b | **Diwali-specific wiring in links and the payment check** | Seva slugs are `*-diwali`, the paid-check counts only Diwali sevas / HKM's Diwali flag, links expired 8 Nov, and the pre-dial "festival window" check **fails closed** (Jagan 29 Oct; PP HTML). Without new Kartik settings, calls won't dial or payments won't attribute. The HKM site also caches link redirects | **Jagan** + HKM web team via **ayushman**. No owner today: assign one | New HKM Kartik seva pages and slugs, attribution rule, link expiry and festival window, all set. Test payment on the 21st shows on the dashboard as Kartik |
 | 8 | **Business hours default (19:00) / numbers not linked to follow-up agent** | Recurred in Janmashtami and Pitru Paksha. Pitru Paksha follow-up agent had no number | **Ishaan** | Screenshot of business hours on every number, 08:00–21:00, taken on the 21st after final config |
 | 9 | **Config drift between the three bots** | Wrong LLM on Diwali bots, AMD off, Marathi stack wrong, different TTS version on the follow-up bot | **Swathi** | One table: bot × (LLM, fallback, STT, TTS model + voice "Gopal", AMD, 180 s cap, end-call, languages) all identical except the script |
 | 10 | **Dashboard single point of failure** | Only Jagan knows it. Data source unknown. Spend must include Karix cost | **Harshdeep** → Jagan | Name a backup person. Data source written down. Spend formula agreed (calls × rate + Karix) |
+
+| 11 | **Vendor leads leaking into the upload** | 50K of the 5L vendor base were already sent to Ishaan (18 Nov). You excluded the vendor base for Kartik | **Ishaan**, check by Harshdeep | Upload file's source column / count reconciles to the ISKCON base only |
+| 12 | **Pressure to overspend** | ayushman said he is covering a ~₹1.5L revenue shortfall elsewhere and uses ISKCON to "fill up". Expect pushes for extra cold or evening batches beyond ₹2L | **You** | 17:00 go/no-go and any extra batch need your written OK. Stop-loss agreed in writing beforehand |
+| 13 | **Ops staffing** | Ishaan is part-time (also on Credit Saison). Your 18 Nov 12:49 question to Jagan about FDE staffing has no reply. The follow-up seva-slug mapping (asked 29 Oct) has no owner since Aayush left | **Jagan / Tanmay** | Named owner for each launch-day ops step and a named backup |
 
 Also watch:
 - **180 s hard cut** can land mid-sentence and give a double "Hare Krishna". Nobody has checked the share of calls above 180 s; ask Swathi to pull it from the Diwali data.
@@ -31,13 +36,13 @@ Also watch:
 ## 1. Day-by-day checklist
 
 ### Thu 19 Nov — freeze day
-- [ ] **ayushman:** seva/benefit list frozen in writing (Annadaan, Gau Seva, amounts, minimum ₹500?).
-- [ ] **ayushman:** confirm which date is the actual festival, and which bot runs which day (22, 23, 24).
+- [ ] **ayushman:** seva/benefit list frozen in writing (Annadaan, Gau Seva, amounts, minimum ₹500?). So far it is only his verbal "tomorrow itself" on 18 Nov; your 14:26 Slack ask has no reply.
+- [ ] **ayushman:** confirm which date is the actual festival: approval was "for 24th", and your 09:09 question on whether it is the Deepotsav ending on the 24th is unanswered. Also confirm which bot runs which day (22, 23, 24).
   - The 17 Nov plan: Bot 1 "is coming", Bot 2 same-day "is here", Bot 3 follow-up.
   - Not resolved on 18 Nov.
-- [ ] **ayushman:** lead-split mail with counts per workflow, and the total lead count with its reasoning. You challenged "50K" on 18 Nov: ₹2L budget ÷ ~₹1.65 per call (₹33K per 20K calls) ≈ 1.2L call attempts ≈ ~40K leads at 3 retries.
+- [ ] **ayushman:** lead-split mail with counts per workflow, and the total lead count with its reasoning. You challenged the 30K/50K lead count on 18 Nov: ₹2L budget ÷ ~₹1.65 per call (₹33K per 20K calls) ≈ 1.2L call attempts ≈ ~40K leads at 3 retries.
 - [ ] **Harshdeep:** provisioning heads-up to **Vivek, Prashant, Chetan, cc Abhishek Ranjan**, with volume per slot (8–11 AM, 7–9 PM) and dates.
-- [ ] **Swathi:** bots shared (deadline committed on 17 Nov). Send her the §2 verification list *with* the handover.
+- [ ] **Swathi:** bots shared. The 17 Nov call said "will **try** to share by the 19th", with the speaker unclear, so lock the date with her. Send her the §2 verification list *with* the handover.
 - [ ] **Swathi:** share the Diwali good/bad call sheet.
 - [ ] **Harshdeep → Jagan:** dashboard data source; Karix cost feed; backup person.
 - [ ] **You:** agree the stop-loss with Tanmay/ayushman now: ₹50K spent with no ROAS → pause is not an "agent was bad" escalation.
@@ -131,7 +136,7 @@ Say or force each of these and listen:
 - सेवा, अन्नदान, गौ सेवा
 - कार्तिक पूर्णिमा (Kartik Purnima)
 - the amounts ₹501 / ₹1,008 / ₹1,501 / ₹2,508 / ₹5,008
-- a name with initials ("N V S J Rao")
+- a name with initials (e.g. "A B C Kumar")
 - the temple name
 
 **Fail** if any of these happen:
@@ -141,7 +146,7 @@ Say or force each of these and listen:
 - an amount in the wrong language
 - a slug read aloud
 
-**Root-cause rule:** fix it at the source. The LLM output, first message and variables must use Devanagari or lowercase; never all caps. Don't rely only on the console pronunciation dictionary, which is skipped when language = unknown.
+**Root-cause rule:** fix it at the source. The LLM output, first message and variables must use Devanagari or lowercase; never all caps. Don't rely only on the console pronunciation dictionary: the Diwali ISKCON fix was a dictionary entry that was never retested.
 
 ## 4. Metrics to watch (Aayush/ayushman's frame from 18 Nov)
 - **Input metrics:** attempts, connects / connect %, CPS per number vs cap (43), failed/429 count, 0–30 s drop %, telephony health, billing minutes.
@@ -149,7 +154,8 @@ Say or force each of these and listen:
 - **Client output:** two WhatsApp messages a day, three lines each.
 
 ## 5. Contradictions to settle before launch
-1. Who holds the lead CSV. Summary: Harshdeep + Ishaan. Transcript: ayushman + Ishaan.
+1. Lead CSV access: the transcript shows ayushman + Ishaan hold it (data was passed to Aayush last time). Harshdeep and you are to be added. The Granola summary saying "Harshdeep + Ishaan" is wrong.
+1b. Diwali final numbers (₹3,25,173 / ₹2,06,550 / 212 payments) come only from the meeting summary of a dashboard screenshot. Get the screenshot before quoting them.
 2. Number pool. Plivo 3 / Vobiz 1, or the reverse? How many on follow-up?
 3. Follow-up trigger: 24 h (practice) vs 4 h (workflow HTML).
 4. Evening window: 5–9, 6–9 or 7–9 PM.
@@ -160,9 +166,9 @@ Say or force each of these and listen:
 
 ## 6. Not built yet, and nobody should claim it is
 - Number rotation + retry outside the workflow (Tanmay). **Not done.**
-- Karix WA-status webhook (P1), IP whitelist (P2), RCS→SMS fallback (P4). **Pending.**
-- WbizTool automated in the workflow. **Manual**, 1 number.
-- Auto-DND. No evidence it exists.
-- Nautilus lead store / CRM. **Not done.**
+- Karix WA-status webhook (P1), IP whitelist (P2), Karix ownership (P3), RCS→SMS fallback (P4). **Pending**, no owner named.
+- WbizTool **is** wired as a fallback in Hot/Warm (Jagan, 29 Oct), but only 1–2 numbers. Don't scale it.
+- Auto-DND. Only built for Muthoot; no ISKCON evidence.
+- Nautilus **lead store** / CRM. **Not done.** Nautilus is used only for the web-payment check.
 - Failed-call status filter and duplicate UI (Vivek, "next release"). Unconfirmed.
 - No-audio fix (~0.5% of calls, Janmashtami). Unconfirmed.
