@@ -10,7 +10,7 @@ Sources: Bhavana's "ISKCON Issue Log" (Google Doc, shared 19 Nov), #iskcon_inter
 
 | # | Record | Why | Status |
 |---|---|---|---|
-| R1 | **Agent register:** every Kartik agent: name, agent ID, purpose (Hot / Warm / Cold / Follow-up; "coming" vs "same-day"), workflow + version it is linked to | Can't check what isn't listed. Diwali had 4 bots × 5–6 language prompts | `[ask Swathi]` |
+| R1 | **Agent register:** every Kartik agent: name, agent ID, purpose (Hot / Warm / Cold / Follow-up; "coming" vs "same-day"), workflow + version it is linked to | Can't check what isn't listed. Diwali had 4 bots × 5–6 language prompts | Partial: Hot/Warm/Cold IDs known (§G). **Follow-up missing** |
 | R2 | **Profile register:** per agent, each language profile ID and the languages it serves | Language profiles drift: Marathi stack was wrong in Pitru Paksha hot profiles | `[ask Swathi]` |
 | R3 | **JSON export** of each agent + profile (Kartik) **and** the Diwali source agent it was cloned from | Needed for the uniformity diff (§C) and the copy-forward scan (§D) | `[ask Swathi]` |
 | R4 | **Change log:** what changed from the Diwali bot, field by field | Tells you what *should* differ; everything else must be identical | `[ask Swathi]` |
@@ -115,6 +115,30 @@ Fail if any of these appear (case-insensitive, every script):
 **Coverage:** every bot × every dialled language. Testers: Hindi/English (Swathi, Harshdeep sign-off), Marathi (Bhavana), Telugu (Chenna Keshav), Kannada (Nidhishree), Tamil (Gokulram) `[confirm Tamil and Gujarati leads exist]`.
 
 ---
+
+## G. Current agent inventory (from Slack, 19 Nov). **No JSON exports exist anywhere**
+Project `6a140cbdbb80fd14f0577a95`. Persona "Vinayak", "Iskcon Hyderabad".
+
+| Bot | Agent ID | Profile seen | Status |
+|---|---|---|---|
+| Kartik **Hot** | `6afd9485c1ad8b089291d66a` | `…d66b` | Posted by Swathi 18 Nov 21:43, in testing |
+| Kartik **Warm** | `6afda0bcc1ad8b089291f289` | `…f28a` | same |
+| Kartik **Cold** | `6afda1fc3235e77e97a4bcb8` | `…bcb9` | same |
+| Kartik **Follow-up** | **not built / not posted** | — | **Gap**: the plan relies on it (Diwali follow-up ROAS 8.6–13×) |
+| Diwali source bots | Hot `6adc9a7b65effb06a85584f7`, Warm `6ae091036d0c6e5954a757b2`, Follow-up `6adb0c06d79fcc0666462e83`, "Diwali agent" `6ad89ba06a49c847cf62cab2`, Cold ID not found | — | Almost certainly the clone source (same persona, stages, Amount Rule) |
+
+Per-language profile IDs, and LLM/TTS/voice/AMD/max-duration for the Kartik bots, are **not stated anywhere** → these fill R2/R3/R7.
+
+**Issues already visible in the Kartik bots (screenshots, 18 Nov):**
+1. Swathi: "first message is not translating properly". Open.
+2. English first message opens with "Hello", not हरे कृष्ण, and says "food donation service" instead of annadana seva. The other languages differ.
+3. Tamil first message writes **uppercase "ISKCON"**. This repeats the Diwali acronym bug.
+4. Persona name in native script for Tamil/Telugu, Latin script elsewhere. Check that the TTS says "Vinayak" the same way in each.
+5. First message **hard-codes ₹2,508** for annadana, apparently in all three bots. It should come from `seva_pitch_amount`/`last_donation_amount` per segment (Hot = last amount or step-up; Cold lower). This is the same class of bug as Diwali's fixed ₹1,008.
+6. Variable syntax changed: `{{devotee_name}}` vs Diwali's `[[ ]]`. Confirm the platform resolves the new syntax in every profile, or names will be spoken as literal text.
+7. Test sheet "Vinayak_Kartik_Purnima_Test_Cases" covers Hindi/English/Marathi/Telugu/Tamil, **no Kannada**, though the agents have a Kannada first message.
+8. Diwali residue to grep for: the दीपदान pronunciation entries for removed sevas were left in; "गो सेवा" vs "गौ सेवा" spelling in Marathi; slugs `*-seva-diwali`; eval seva list (Diwali's had 5 sevas and "Deepa Daana" misspelt).
+9. LLM/STT were wrong at Diwali handover (Gemini Flash instead of GPT-5.6 Luna + Saaras v4). Swathi fixed it on request. Assume it can happen again and verify every profile.
 
 ## F. Sign-off rule
 An agent goes live only when R1–R8 exist, §C shows no unexplained C1 difference, §D is clean, and every §E row passes in every language it serves. Anything else is a documented exception, signed off by you.
